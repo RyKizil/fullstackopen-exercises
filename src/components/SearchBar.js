@@ -2,13 +2,18 @@ import React, {useState, useEffect} from 'react'
 
 const SearchBar = ({persons}) => {
     const [searchTerm, setSearchTerm] = useState("");
-    const [searchResults, setSearchResults] = React.useState([]);
+    const [searchResults, setSearchResults] = useState([]);
 
     useEffect(() => {
+      if(searchTerm.trim().length < 1 ) {
+        setSearchResults([])
+      } else {
         const results = persons.filter(person =>
           person.name.toLowerCase().includes(searchTerm)
         );
         setSearchResults(results);
+      }
+        
       }, [searchTerm]);
 
 
@@ -34,3 +39,5 @@ const SearchBar = ({persons}) => {
         </>
       )
 }
+
+export default SearchBar;

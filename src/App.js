@@ -1,27 +1,72 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import SearchBar from './components/SearchBar';
+import axios from 'axios';
+import personService from './services/persons';
 
 const App = () => {
-  const [ persons, setPersons] = useState([
-    { name: 'Arto Hellas', number: '040-123456' },
-    { name: 'Ada Lovelace', number: '39-44-5323523' },
-    { name: 'Dan Abramov', number: '12-43-234345' },
-    { name: 'Mary Poppendieck', number: '39-23-6423122' }
-  ]) 
+  const [ persons, setPersons] = useState([]); 
   const [ newName, setNewName ] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('');
  
+  useEffect(() => {
+    personService.getAll()
+    .then(initialPersons => {
+      setPersons(initialPersons)
+    })
+  }, [])
 
+  const changeNumber = () => {
+    const p = persons.find(n => n.name.toLowerCase() === newName.toLowerCase())
+    const changedPerson = { ...p, number: phoneNumber }
+
+    personService
+      .update(p.id, changedPerson)
+        .then(returnedPerson => {setPersons(persons.map(pers => pers.id !== p.id ? pers : returnedPerson))      })
+  }
 
   const handleSubmit = e => {
       e.preventDefault();
+      let exists = false;
       persons.forEach(person => {
-          person.name.toLowerCase() === newName.toLowerCase() ?  alert(`${newName} already exists in phonebook`) :  setPersons(persons.concat({name: newName, number: phoneNumber}));
+          if(person.name.toLowerCase() === newName.toLowerCase()){
+            if(window.confirm(`${newName} is already added in the phonebook, replace the old number with new one?`)){
+              changeNumber();
+              exists = true;
+            }
+          }   
       })
-     
-      setNewName('');
-      setPhoneNumber('');
+      if(!exists){
+        const personObj = {
+          name: newName,
+          number: phoneNumber,
+          id: Math.max(...persons.map(person => person.id), 0) + 1
+        }  
+  
+        personService.create(personObj)
+        .then(returnedPerson => {
+          setPersons(persons.concat(returnedPerson));
+          setNewName('');
+          setPhoneNumber('');
+        })  
+      }
+      
   }
+
+  const handleDelete = (e) => {
+    const name = e.target.getAttribute("name");
+    const personId = Number(e.target.getAttribute("personid"));
+    if(window.confirm(`Are you sure you want to delete ${name}?`)){
+      setPersons(persons.filter(p => p.id !== personId));
+    axios.delete(`http://localhost:3001/persons/${personId}`)
+      .then(res => {
+        console.log(res);
+        console.log(res.data);
+      })
+      
+    }
+    
+     
+   };
 
 
   
@@ -30,6 +75,7 @@ const App = () => {
     <div>
       <h2>Phonebook</h2>
      <SearchBar  persons={persons}/>
+     <h2>Add New</h2>
       <form onSubmit={handleSubmit}>
         <div>
           name: <input onChange={(e) => setNewName(e.target.value)}/>
@@ -43,7 +89,9 @@ const App = () => {
        {
            persons.map( (person, i) => {
                return (
-                   <p key={i}>{person.name} {person.number}</p>
+                 <Fragment key={i}>
+                   <span >{person.name} {person.number}  </span><button name={person.name} onClick={handleDelete} personid={person.id}>delete</button><br/>
+                  </Fragment>
                )
            })
            
